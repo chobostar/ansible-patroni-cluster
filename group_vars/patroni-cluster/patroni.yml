@@ -1,0 +1,6 @@
+patroni_scope: cluster-pgsql
+patroni_rest_password: 'flsdjkfasdjhf'
+patroni_postgres_password: 'postgres'
+patroni_replicator_user: 'replicator'
+patroni_replicator_password: 'flsdjkfasdjhf'
+keepalived_virtual_ipaddress: 100.100.104.90

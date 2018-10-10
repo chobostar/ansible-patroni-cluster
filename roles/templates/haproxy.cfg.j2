@@ -1,0 +1,68 @@
+global
+maxconn 8000
+
+defaults
+log global
+mode tcp
+retries 2
+timeout client 30m
+timeout connect 4s
+timeout server 30m
+timeout check 5s
+
+frontend ft_postgresql
+bind *:{{ postgresql_port }}
+default_backend postgres-patroni
+
+frontend ft_postgresql_readonly
+bind *:{{ postgresql_port_readonly }}
+default_backend postgres-patroni-replica
+
+frontend ft_pgbouncer
+bind *:{{ pgbouncer_listen_port }}
+default_backend postgres-pgbouncer-patroni
+
+frontend ft_pgbouncer_only
+bind *:{{ pgbouncer_listen_port_readonly }}
+default_backend postgres-pgbouncer-patroni-replica
+
+
+backend postgres-patroni
+  option httpchk GET /master
+
+  http-check expect status 200
+  default-server inter 3s fall 3 rise 2
+
+{% for host in groups[patroni_cluster_name] %}
+  server {{ hostvars[host]['patroni_node_name'] }} {{ host }}:{{ postgresql_port_rewritten }} maxconn 3000 check port 8008
+{% endfor %}
+
+backend postgres-patroni-replica
+  option httpchk GET /replica
+
+  http-check expect status 200
+  default-server inter 3s fall 3 rise 2
+
+{% for host in groups[patroni_cluster_name] %}
+  server {{ hostvars[host]['patroni_node_name'] }} {{ host }}:{{ postgresql_port_rewritten }} maxconn 3000 check port 8008
+{% endfor %}
+
+backend postgres-pgbouncer-patroni
+  option httpchk GET /master
+
+  http-check expect status 200
+  default-server inter 3s fall 3 rise 2
+
+{% for host in groups[patroni_cluster_name] %}
+  server {{ hostvars[host]['patroni_node_name'] }} {{ host }}:{{ pgbouncer_listen_port_rewritten }}  maxconn 3000 check port 8008
+{% endfor %}
+
+backend postgres-pgbouncer-patroni-replica
+  option httpchk GET /replica
+
+  http-check expect status 200
+  default-server inter 3s fall 3 rise 2
+
+{% for host in groups[patroni_cluster_name] %}
+  server {{ hostvars[host]['patroni_node_name'] }} {{ host }}:{{ pgbouncer_listen_port_rewritten }}  maxconn 3000 check port 8008
+{% endfor %}

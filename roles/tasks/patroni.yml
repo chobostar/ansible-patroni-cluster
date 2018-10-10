@@ -1,0 +1,82 @@
+---
+
+- name: PostgreSQL | Install
+  package: name={{ item }} state=present
+  tags: patroni
+  with_items:
+    - postgresql
+    - python-psycopg2
+  when: install is defined
+
+- name: PostgreSQL | Ensure cluster directory is exists
+  file:
+    path: "{{ patroni_cluster_data_dir }}"
+    owner: postgres
+    group: postgres
+    mode: 0700
+    state: directory
+
+- name: PostgreSQL | Ensure socket directory is exists
+  file:
+    path: "{{ postgresql_unix_socket_directories }}"
+    owner: postgres
+    group: postgres
+    mode: 0750
+    state: directory
+
+- name: Patroni | install python packages
+  pip: name={{ item }}
+  tags: patroni
+  with_items:
+    - python-etcd
+    - python-consul
+    - dnspython
+    - boto
+    - mock
+    - requests
+    - six
+    - kazoo
+    - click
+    - tzlocal
+    - prettytable
+    - PyYAML
+    - psutil
+    - cdiff
+  when: install is defined
+
+- name: Patroni | checkout sources
+  git: repo=https://github.com/zalando/patroni.git dest=/opt/patroni
+  tags: patroni
+  when: install is defined
+  
+- name: Patroni | create /etc/patroni
+  file: state=directory dest=/etc/patroni
+  tags: patroni
+  when: install is defined
+  
+- name: Patroni | put patroni.yml
+  template: src=patroni.yml.j2 dest=/etc/patroni/patroni.yml backup=yes
+  tags: patroni
+  register: patroni_configuration
+  
+- name: Patroni | put patroni.service systemd unit
+  template: src=patroni.service dest=/etc/systemd/system/patroni.service backup=yes
+  tags: patroni
+  register: patroni_service
+  when: install is defined
+  
+- name: Patroni | Reload daemon definitions
+  command: /usr/bin/systemctl daemon-reload
+  tags: patroni
+  when: patroni_service.changed
+
+- name: Patroni | Reload daemon definitions
+  service: name=patroni state=restarted enabled=yes
+  tags: patroni
+  when: patroni_service.changed
+  
+- name: Patroni | reload patroni
+  service: name=patroni state=reloaded enabled=yes
+  tags: patroni
+  when: patroni_configuration.changed
+

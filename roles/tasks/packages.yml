@@ -1,0 +1,8 @@
+- name: Install essential software
+  package: name={{ item }} state=present
+  tags: software
+  with_items:
+   - unzip
+   - s3cmd
+   - git
+   - python-pip

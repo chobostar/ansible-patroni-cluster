@@ -1,0 +1,8 @@
+---
+
+patroni_node_name: postgres1test
+
+keepalived_priority: 99
+
+keepalived_vrrp_instance_interface: br0
+

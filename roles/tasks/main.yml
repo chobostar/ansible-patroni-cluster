@@ -1,0 +1,5 @@
+
+- include: packages.yml
+- include: patroni.yml
+- include: haproxy.yml
+- include: keepalived.yml

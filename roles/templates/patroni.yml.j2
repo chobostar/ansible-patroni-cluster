@@ -1,0 +1,86 @@
+name: {{ patroni_node_name }}
+scope: {{ patroni_scope }}
+
+consul:
+  host: {{ patroni_consul_host }}
+  url: {{ patroni_consul_url }}
+
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: {{ ansible_default_ipv4.address }}:8008
+  authentication:
+    username: patroni
+    password: '{{ patroni_rest_password }}'
+#  auth: 'username:{{ patroni_rest_password }}'
+
+bootstrap: 
+  dcs:
+    ttl: 50
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 3145728 # 3 megabyte in bytes
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        unix_socket_directories: '{{ postgresql_unix_socket_directories }}'
+        archive_mode: "{{'on' if postgresql_archive_mode else 'off'}}"
+        wal_level: '{{ postgresql_wal_level }}'
+        archive_command: "{{ postgresql_archive_command }}"
+        max_wal_senders: {{ postgresql_max_wal_senders }}
+        wal_keep_segments: {{ postgresql_wal_keep_segments }}
+        archive_timeout: {{ postgresql_archive_timeout }}
+        max_replication_slots: {{ postgresql_max_replication_slots }}
+        hot_standby: "on"
+        wal_log_hints: "{{ postgresql_wal_log_hints }}"
+        max_connections: {{ postgresql_max_connections }}
+
+  initdb:
+  - encoding: UTF8
+  - data-checksums
+
+  users:
+    postgres:
+      password: {{ patroni_postgres_password }}
+      options:
+        - superuser
+        - createrole
+        - createdb
+        - replication
+    {{ patroni_replicator_user }}:
+      password: {{ patroni_replicator_password }}
+      options:
+        - replication
+
+  pg_hba:  # Add following lines to pg_hba.conf after running 'initdb'
+{% for connection in postgresql_pg_hba_default %}
+  - {{connection.type}} {{connection.database}} {{connection.user}} {{connection.address}} {{connection.method}}
+{% endfor %}
+
+{% for connection in postgresql_pg_hba_custom %}
+  - {{connection.type}} {{connection.database}} {{connection.user}} {{connection.address}} {{connection.method}}
+{% endfor %}
+
+postgresql:
+  listen: 0.0.0.0:{{ postgresql_port_rewritten }}
+  connect_address: {{ ansible_default_ipv4.address }}:{{ postgresql_port_rewritten }}
+  data_dir: {{ patroni_cluster_data_dir }}
+  pgpass: /tmp/pgpass
+  pg_rewind:
+    username: postgres
+    password: {{ patroni_postgres_password }}
+  authentication:
+    replication:
+      username: {{ patroni_replicator_user }}
+      password: {{ patroni_replicator_password }}
+    superuser:
+      username: postgres
+      password: {{ patroni_postgres_password }}
+  parameters:
+    max_connections: {{ postgresql_max_connections }}
+    max_locks_per_transaction: {{ postgresql_max_locks_per_transaction }}
+    max_worker_processes: {{ postgresql_max_worker_processes }}
+    max_prepared_transactions: {{ postgresql_max_prepared_transactions }}
+    wal_level: '{{ postgresql_wal_level }}'
+    wal_log_hints: {{ postgresql_wal_log_hints }}
+    track_commit_timestamp: {{ postgresql_track_commit_timestamp }}

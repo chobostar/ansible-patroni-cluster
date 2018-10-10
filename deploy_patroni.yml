@@ -1,0 +1,10 @@
+---
+- name: PatroniCluster deploy playbook
+  become: true
+  gather_facts: true
+  remote_user: root
+  no_log: false
+  strategy: linear
+  roles:
+  - patroni
+  hosts: patroni-cluster

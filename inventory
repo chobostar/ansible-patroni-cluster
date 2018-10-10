@@ -1,0 +1,4 @@
+[patroni-cluster]
+postgres1test.local
+postgres2test.local
+postgres3test.local

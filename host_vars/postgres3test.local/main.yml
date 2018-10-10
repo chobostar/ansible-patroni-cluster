@@ -1,0 +1,5 @@
+---
+
+patroni_node_name: postgres3test
+
+keepalived_priority: 101
